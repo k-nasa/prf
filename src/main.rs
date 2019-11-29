@@ -1,7 +1,7 @@
 use std::process::Command;
 
 use clap::{
-    crate_authors, crate_description, crate_name, crate_version, App, AppSettings, Arg, SubCommand,
+    crate_authors, crate_description, crate_name, crate_version, App, AppSettings, Arg,
 };
 use serde::{Deserialize, Serialize};
 
