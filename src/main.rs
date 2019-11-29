@@ -1,15 +1,14 @@
 use std::process::Command;
 
-use clap::{
-    crate_authors, crate_description, crate_name, crate_version, App, AppSettings, Arg,
-};
+use anyhow::anyhow;
+use clap::{crate_authors, crate_description, crate_name, crate_version, App, AppSettings, Arg};
 use serde::{Deserialize, Serialize};
 
 type FprResult<T> = Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PullRequest {
-    head: Head,
+    pub head: Head,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -34,17 +33,30 @@ fn main() -> FprResult<()> {
         owner, repo, pr_no
     );
 
-    async_std::task::block_on(async {
-        let res: PullRequest = match surf::get(url).recv_json().await {
-            Err(_) => {
-                eprintln!("failed fetch pull_request");
-                std::process::exit(1);
-            }
+    let pr: FprResult<PullRequest> = async_std::task::block_on(async {
+        let res: PullRequest = match surf::get(url.clone()).recv_json().await {
+            Err(_) => Err(anyhow!("feailed fetch pull request.\nfetch url: {}", url))?,
             Ok(r) => r,
         };
 
-        println!("{:?}", res);
+        Ok(res)
     });
+
+    let ref_string = pr?.head.ref_string;
+
+    let arg = format!("pull/{}/head:{}", pr_no, ref_string);
+    let output = Command::new("git").args(&["fetch", &arg]).output();
+
+    let output = match output {
+        Ok(output) => output,
+        Err(_) => Err(anyhow!("git command execution failed"))?,
+    };
+
+    let stderr = std::str::from_utf8(&output.stderr)?.trim();
+
+    if !stderr.is_empty() {
+        Err(anyhow!("{}", stderr))?
+    }
 
     Ok(())
 }
@@ -54,8 +66,12 @@ fn read_gitconfig() -> FprResult<(String, String)> {
         .arg("config")
         .arg("--get")
         .arg("remote.origin.url")
-        .output()
-        .expect("Failed run git config command");
+        .output();
+
+    let output = match output {
+        Ok(output) => output,
+        Err(_) => Err(anyhow!("git command execution failed"))?,
+    };
 
     let origin_url = std::str::from_utf8(&output.stdout)?.trim();
 
