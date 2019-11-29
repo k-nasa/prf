@@ -1,15 +1,50 @@
+use std::process::Command;
+
 use clap::{
     crate_authors, crate_description, crate_name, crate_version, App, AppSettings, Arg, SubCommand,
 };
+use serde::{Deserialize, Serialize};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut app = build_app();
+type FprResult<T> = Result<T, Box<dyn std::error::Error>>;
 
-    let matches = app.clone().get_matches();
+#[derive(Debug, Serialize, Deserialize)]
+struct PullRequest {
+    head: Head,
+}
 
-    match matches.subcommand() {
-        ("help", Some(_)) | _ => app.print_help()?,
-    }
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub struct Head {
+    #[serde(rename = "ref")]
+    pub ref_string: String,
+}
+
+fn main() -> FprResult<()> {
+    let app = build_app();
+    let matches = app.get_matches();
+
+    let (owner, repo) = read_gitconfig()?;
+
+    let owner = matches.value_of("owner").unwrap_or(&owner);
+    let repo = matches.value_of("repository").unwrap_or(&repo);
+
+    let pr_no = matches.value_of("pr_no").unwrap();
+
+    let url = format!(
+        "https://api.github.com/repos/{}/{}/pulls/{}",
+        owner, repo, pr_no
+    );
+
+    async_std::task::block_on(async {
+        let res: PullRequest = match surf::get(url).recv_json().await {
+            Err(_) => {
+                eprintln!("failed fetch pull_request");
+                std::process::exit(1);
+            }
+            Ok(r) => r,
+        };
+
+        println!("{:?}", res);
+    });
 
     Ok(())
 }
@@ -48,12 +83,21 @@ fn build_app() -> App<'static, 'static> {
         .arg(
             Arg::with_name("pr_no")
                 .help("pull request number fetching to local")
-                .value_name("pr_no"),
+                .value_name("pr_no")
+                .required(true),
         )
-        .subcommand(
-            SubCommand::with_name("help")
-                .alias("h")
-                .about("Show help")
-                .setting(AppSettings::ColoredHelp),
+        .arg(
+            Arg::with_name("owner")
+                .short("o")
+                .long("owner")
+                .help("repository owner (By default it uses the local repository's origin url)")
+                .value_name("owner"),
+        )
+        .arg(
+            Arg::with_name("repository")
+                .short("r")
+                .long("repository")
+                .help("repository name (By default it uses the local repository's origin url)")
+                .value_name("repository"),
         )
 }
