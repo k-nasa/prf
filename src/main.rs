@@ -110,7 +110,7 @@ fn build_app() -> App<'static, 'static> {
         .arg(
             Arg::with_name("remote")
                 .value_name("remote")
-            .default_value("origin")
+                .default_value("origin"),
         )
         .arg(
             Arg::with_name("owner")
