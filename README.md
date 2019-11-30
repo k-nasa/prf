@@ -10,9 +10,11 @@ I was troubled by `fpr` or `prf` but I decided to use 'prf' for ease of typing.
 A tool for easily fetching submitted PR into a local repository
 
 For example, I tried to get a PR branch locally by typing the following command a while ago.
+
 `git fetch upstream pull / 503 / head: random_merge`
 
 However, two pieces of information are needed to execute this command.
+
 One is the PR number and the second is the branch name.
 
 It's a little cumbersome to check and enter this. So I made a tool that can get PR branch locally only with PR number.
