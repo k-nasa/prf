@@ -36,7 +36,7 @@ fn main() -> FprResult<()> {
 
     let pr: FprResult<PullRequest> = async_std::task::block_on(async {
         let res: PullRequest = match surf::get(url.clone()).recv_json().await {
-            Err(_) => Err(anyhow!("feailed fetch pull request.\nfetch url: {}", url))?,
+            Err(_) => return Err(anyhow!("feailed fetch pull request.\nfetch url: {}", url).into()),
             Ok(r) => r,
         };
 
@@ -50,13 +50,13 @@ fn main() -> FprResult<()> {
 
     let output = match output {
         Ok(output) => output,
-        Err(_) => Err(anyhow!("git command execution failed"))?,
+        Err(_) => return Err(anyhow!("git command execution failed").into()),
     };
 
     let stderr = std::str::from_utf8(&output.stderr)?.trim();
 
     if !stderr.is_empty() {
-        Err(anyhow!("{}", stderr))?
+        return Err(anyhow!("{}", stderr).into());
     }
 
     println!("create new branch: {}", ref_string);
@@ -75,7 +75,7 @@ fn read_gitconfig(remote: &str) -> FprResult<(String, String)> {
 
     let output = match output {
         Ok(output) => output,
-        Err(_) => Err(anyhow!("git command execution failed"))?,
+        Err(_) => return Err(anyhow!("git command execution failed").into()),
     };
 
     let origin_url = std::str::from_utf8(&output.stdout)?.trim();
@@ -116,14 +116,14 @@ fn build_app() -> App<'static, 'static> {
             Arg::with_name("owner")
                 .short("o")
                 .long("owner")
-                .help("repository owner (By default it uses the local repository's origin url)")
+                .help("repository owner (By default it uses the local repository's remote url)")
                 .value_name("owner"),
         )
         .arg(
             Arg::with_name("repository")
                 .short("r")
                 .long("repository")
-                .help("repository name (By default it uses the local repository's origin url)")
+                .help("repository name (By default it uses the local repository's remote url)")
                 .value_name("repository"),
         )
 }
