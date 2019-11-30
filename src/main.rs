@@ -21,8 +21,9 @@ fn main() -> FprResult<()> {
     let app = build_app();
     let matches = app.get_matches();
 
-    let (owner, repo) = read_gitconfig()?;
+    let remote = matches.value_of("remote").unwrap_or("origin");
 
+    let (owner, repo) = read_gitconfig(&remote)?;
     let owner = matches.value_of("owner").unwrap_or(&owner);
     let repo = matches.value_of("repository").unwrap_or(&repo);
 
@@ -45,7 +46,7 @@ fn main() -> FprResult<()> {
     let ref_string = pr?.head.ref_string;
 
     let arg = format!("pull/{}/head:{}", pr_no, ref_string);
-    let output = Command::new("git").args(&["fetch", &arg]).output();
+    let output = Command::new("git").args(&["fetch", &remote, &arg]).output();
 
     let output = match output {
         Ok(output) => output,
@@ -58,14 +59,18 @@ fn main() -> FprResult<()> {
         Err(anyhow!("{}", stderr))?
     }
 
+    println!("create new branch: {}", ref_string);
+
     Ok(())
 }
 
-fn read_gitconfig() -> FprResult<(String, String)> {
+fn read_gitconfig(remote: &str) -> FprResult<(String, String)> {
+    let remote = format!("remote.{}.url", remote);
+
     let output = Command::new("git")
         .arg("config")
         .arg("--get")
-        .arg("remote.origin.url")
+        .arg(remote)
         .output();
 
     let output = match output {
@@ -101,6 +106,11 @@ fn build_app() -> App<'static, 'static> {
                 .help("pull request number fetching to local")
                 .value_name("pr_no")
                 .required(true),
+        )
+        .arg(
+            Arg::with_name("remote")
+                .value_name("remote")
+            .default_value("origin")
         )
         .arg(
             Arg::with_name("owner")
