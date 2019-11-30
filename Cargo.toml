@@ -1,7 +1,13 @@
 [package]
-name = "fpr"
+name = "prf"
 version = "0.1.0"
 authors = ["k-nasa <htilcs1115@gmail.com>"]
+description = "Tool to fetch PR branch to local repository"
+keywords = ["cli", "prf", "github"]
+categories = ["command-line-utilities"]
+repository = "https://github.com/k-nasa/prf"
+license="MIT"
+readme = "README.md"
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
